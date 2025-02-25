@@ -1,52 +1,88 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom"; 
 
 const Checkouts = () => {
   const [checkouts, setCheckouts] = useState([]);
   const [newCheckout, setNewCheckout] = useState({ user_id: "", book_id: "" });
+  const [isLoading, setIsLoading] = useState(false); 
+  const [error, setError] = useState(null);
+  const navigate = useNavigate(); 
 
   useEffect(() => {
     fetchCheckouts();
   }, []);
 
   const fetchCheckouts = async () => {
+    setIsLoading(true);
+    setError(null);
     try {
-      const response = await axios.get("http://localhost:5000/api/checkouts", {
+      const response = await axios.get(`http://localhost:8000/api/checkout`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-      setCheckouts(response.data);
+      setCheckouts(Array.isArray(response.data) ? response.data : response.data.checkouts || []);
     } catch (error) {
       console.error("Error fetching checkouts:", error);
+      setError(error.response?.data?.message || "Failed to fetch checkouts");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const checkoutBook = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError(null);
     try {
-      await axios.post("http://localhost:5000/api/checkouts", newCheckout, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      const response = await axios.post(`http://localhost:8000/api/checkout`, {
+        ...newCheckout,
+        user_id: newCheckout.user_id, 
+        book_id: newCheckout.book_id, 
+      }, {
+        headers: { 
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
+        },
       });
       fetchCheckouts();
       setNewCheckout({ user_id: "", book_id: "" });
+      alert("Book checked out successfully");
     } catch (error) {
-      alert(error.response?.data?.message || "Error checking out book");
+      console.error("Error checking out book:", error);
+      const errorMessage = error.response?.data?.message || "Error checking out book";
+      alert(errorMessage);
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const returnBook = async (id) => {
+    setIsLoading(true);
+    setError(null);
     try {
-      await axios.put(`http://localhost:8000/api/checkouts/${id}`, {}, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      const response = await axios.put(`http://localhost:8000/api/checkout/${id}`, {}, {
+        headers: { 
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
+        },
       });
       fetchCheckouts();
+      alert("Book returned successfully");
     } catch (error) {
-      alert(error.response?.data?.message || "Error returning book");
+      console.error("Error returning book:", error);
+      const errorMessage = error.response?.data?.message || "Error returning book";
+      alert(errorMessage);
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">Checkouts</h2>
+      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
       <form onSubmit={checkoutBook} className="space-y-4 mb-6">
         <div>
           <label htmlFor="user_id" className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
@@ -74,27 +110,40 @@ const Checkouts = () => {
         </div>
         <button
           type="submit"
-          className="w-full bg-primary text-white p-2 rounded-md hover:bg-primary-dark transition-colors"
+          disabled={isLoading}
+          className={`w-full bg-primary text-white p-3 rounded-md font-semibold transition-colors ${
+            isLoading ? "opacity-70 cursor-not-allowed" : "hover:bg-primary-dark"
+          }`}
         >
-          Checkout Book
+          {isLoading ? "Checking out..." : "Checkout Book"}
         </button>
       </form>
+      {isLoading && !checkouts.length && <p className="text-gray-500">Loading checkouts...</p>}
       <ul className="space-y-4">
-        {checkouts.map((checkout) => (
-          <li key={checkout._id} className="p-4 bg-gray-100 rounded-lg flex justify-between items-center">
-            <span className="text-gray-800">User {checkout.user_id} checked out Book {checkout.book_id}</span>
-            {checkout.return_date ? (
-              <span className="text-green-500 font-medium">Returned</span>
-            ) : (
-              <button
-                className="bg-green-500 text-white p-2 rounded-md hover:bg-green-600 transition-colors"
-                onClick={() => returnBook(checkout._id)}
-              >
-                Return
-              </button>
-            )}
-          </li>
-        ))}
+        {Array.isArray(checkouts) ? (
+          checkouts.length > 0 ? (
+            checkouts.map((checkout) => (
+              <li key={checkout._id} className="p-4 bg-gray-100 rounded-lg flex justify-between items-center">
+                <span className="text-gray-800">User {checkout.user_id} checked out Book {checkout.book_id}</span>
+                {checkout.return_date ? (
+                  <span className="text-green-500 font-medium">Returned</span>
+                ) : (
+                  <button
+                    className="bg-green-500 text-white p-2 rounded-md font-semibold hover:bg-green-600 transition-colors"
+                    onClick={() => returnBook(checkout._id)}
+                    disabled={isLoading}
+                  >
+                    Return
+                  </button>
+                )}
+              </li>
+            ))
+          ) : (
+            !isLoading && <p className="text-gray-500">No checkouts available.</p>
+          )
+        ) : (
+          <p className="text-red-500">Checkouts data is not an array.</p>
+        )}
       </ul>
     </div>
   );

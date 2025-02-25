@@ -5,17 +5,22 @@ import { useNavigate, Link } from "react-router-dom";
 const Register = () => {
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
     try {
-      const response = await axios.post("http://localhost:8000/api/register", formData);
+      const response = await axios.post(`http://localhost:8000/api/register`, formData, {
+        withCredentials: true,
+      });
       alert(response.data.message || "Registration successful");
       
       if (response.data.user) {
@@ -24,6 +29,8 @@ const Register = () => {
       
       navigate("/login");
     } catch (error) {
+      console.error("Registration error:", error);
+      setError(error.response?.data?.message || "Registration failed due to a network or server error");
       alert(error.response?.data?.message || "Registration failed");
     } finally {
       setIsLoading(false);
@@ -33,6 +40,7 @@ const Register = () => {
   return (
     <div className="max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">Register</h2>
+      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>

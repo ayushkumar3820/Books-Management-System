@@ -11,7 +11,9 @@ configDotenv();
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://locahost:3000",
+    origin: "http://localhost:3000", 
+    methods: ["GET", "POST", "PATCH", "DELETE"], 
+    credentials: true,
   })
 );
 

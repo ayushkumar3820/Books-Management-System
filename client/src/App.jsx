@@ -17,7 +17,7 @@ function App() {
             <Route path="/books" element={<ProtectedRoute><Books /></ProtectedRoute>} />
             <Route path="/checkouts" element={<ProtectedRoute><Checkouts /></ProtectedRoute>} />
             <Route path="/" element={<ProtectedRoute><Books /></ProtectedRoute>} />
-          </Routes>
+          </Routes> 
         </div>
       </div>
     </Router>
